@@ -17,6 +17,8 @@ jobs:
           - os: ubuntu-latest
             artifact_name: brewkeeper-linux-x64
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
