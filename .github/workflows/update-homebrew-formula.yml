@@ -32,6 +32,7 @@ jobs:
           repository: Pallepadehat/homebrew-brewkeeper
           token: ${{ secrets.TAP_GITHUB_TOKEN }}
           path: tap
+          persist-credentials: false
 
       - name: Update formula
         run: |
@@ -65,6 +66,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${{ secrets.TAP_GITHUB_TOKEN }}@github.com/Pallepadehat/homebrew-brewkeeper.git"
           git add Formula/brewkeeper.rb
           git commit -m "brewkeeper ${{ steps.release.outputs.tag }}"
           git push
