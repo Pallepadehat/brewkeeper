@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest an improvement for brewkeeper
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the idea. Please describe the problem and desired outcome.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      placeholder: What pain point are you trying to solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      placeholder: Describe behavior, UX flow, and shortcuts if relevant
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: Optional

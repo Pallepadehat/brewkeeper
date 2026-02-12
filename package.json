@@ -1,14 +1,23 @@
 {
   "name": "brewkeeper",
+  "version": "0.1.0",
+  "description": "A clean terminal UI for safer Homebrew upgrades",
   "module": "src/index.tsx",
   "type": "module",
-  "private": true,
+  "private": false,
   "scripts": {
-    "dev": "bun run --watch src/index.tsx"
+    "dev": "bun run --watch src/index.tsx",
+    "typecheck": "tsc --noEmit",
+    "build:binary": "mkdir -p dist && bun build --compile --outfile dist/brewkeeper src/index.tsx",
+    "build": "bun run typecheck && bun run build:binary"
   },
   "devDependencies": {
     "@types/bun": "latest"
   },
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "license": "MIT",
   "peerDependencies": {
     "typescript": "^5"
   },
