@@ -19,6 +19,7 @@ bun dev
 ## Commit style
 
 Use clear, imperative commit messages:
+
 - `fix cask metadata parsing`
 - `improve footer readability`
 - `add release workflow`
@@ -26,11 +27,8 @@ Use clear, imperative commit messages:
 ## Reporting issues
 
 Please include:
+
 - OS + terminal emulator
 - Bun and Homebrew versions
 - clear reproduction steps
 - expected vs actual behavior
-
-## Code of conduct
-
-By participating, you agree to follow `CODE_OF_CONDUCT.md`.
