@@ -1,30 +1,43 @@
 name: Update Homebrew Formula
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Release Binaries"]
+    types: [completed]
 
 jobs:
   update-tap:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Get release info
         id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          RELEASE=$(gh api repos/Pallepadehat/brewkeeper/releases/latest --jq '.tag_name')
+          VERSION="${RELEASE#v}"
+          echo "tag=${RELEASE}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Download source tarball and compute SHA256
+      - name: Download release assets and compute SHA256
         id: sha
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.release.outputs.tag }}"
-          URL="https://github.com/Pallepadehat/brewkeeper/archive/refs/tags/${TAG}.tar.gz"
-          curl -sL -o source.tar.gz "${URL}"
-          SHA=$(shasum -a 256 source.tar.gz | awk '{print $1}')
-          echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
-          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+          BASE="https://github.com/Pallepadehat/brewkeeper/releases/download/${TAG}"
+
+          curl -sL -o darwin.tar.gz "${BASE}/brewkeeper-darwin-arm64.tar.gz"
+          curl -sL -o linux.tar.gz "${BASE}/brewkeeper-linux-x64.tar.gz"
+
+          DARWIN_SHA=$(shasum -a 256 darwin.tar.gz | awk '{print $1}')
+          LINUX_SHA=$(shasum -a 256 linux.tar.gz | awk '{print $1}')
+
+          echo "darwin_sha256=${DARWIN_SHA}" >> "$GITHUB_OUTPUT"
+          echo "linux_sha256=${LINUX_SHA}" >> "$GITHUB_OUTPUT"
+          echo "darwin_url=${BASE}/brewkeeper-darwin-arm64.tar.gz" >> "$GITHUB_OUTPUT"
+          echo "linux_url=${BASE}/brewkeeper-linux-x64.tar.gz" >> "$GITHUB_OUTPUT"
 
       - name: Checkout tap repository
         uses: actions/checkout@v4
@@ -37,19 +50,24 @@ jobs:
       - name: Update formula
         run: |
           mkdir -p tap/Formula
-          cat > tap/Formula/brewkeeper.rb << 'FORMULA'
+          cat > tap/Formula/brewkeeper.rb << EOF
           class Brewkeeper < Formula
             desc "Clean terminal UI for safer Homebrew upgrades"
             homepage "https://github.com/Pallepadehat/brewkeeper"
-            url "${{ steps.sha.outputs.url }}"
-            sha256 "${{ steps.sha.outputs.sha256 }}"
+            version "${{ steps.release.outputs.version }}"
             license "MIT"
 
-            depends_on "bun" => :build
+            on_macos do
+              url "${{ steps.sha.outputs.darwin_url }}"
+              sha256 "${{ steps.sha.outputs.darwin_sha256 }}"
+            end
+
+            on_linux do
+              url "${{ steps.sha.outputs.linux_url }}"
+              sha256 "${{ steps.sha.outputs.linux_sha256 }}"
+            end
 
             def install
-              system "bun", "install", "--frozen-lockfile"
-              system "bun", "build", "--compile", "--outfile", "brewkeeper", "src/index.tsx"
               bin.install "brewkeeper"
             end
 
@@ -57,8 +75,7 @@ jobs:
               assert_match version.to_s, shell_output("#{bin}/brewkeeper --version")
             end
           end
-          FORMULA
-          # Remove leading whitespace from heredoc
+          EOF
           sed -i 's/^          //' tap/Formula/brewkeeper.rb
 
       - name: Commit and push
@@ -68,5 +85,6 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${{ secrets.TAP_GITHUB_TOKEN }}@github.com/Pallepadehat/homebrew-brewkeeper.git"
           git add Formula/brewkeeper.rb
+          git diff --cached --quiet && echo "No changes" && exit 0
           git commit -m "brewkeeper ${{ steps.release.outputs.tag }}"
           git push

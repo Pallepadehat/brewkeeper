@@ -39,8 +39,8 @@ jobs:
       - name: Package archive
         run: |
           mkdir -p release
-          cp dist/brewkeeper "release/${{ matrix.artifact_name }}"
-          tar -czf "release/${{ matrix.artifact_name }}.tar.gz" -C release "${{ matrix.artifact_name }}"
+          cp dist/brewkeeper release/brewkeeper
+          tar -czf "release/${{ matrix.artifact_name }}.tar.gz" -C release brewkeeper
           shasum -a 256 "release/${{ matrix.artifact_name }}.tar.gz" > "release/${{ matrix.artifact_name }}.sha256"
 
       - name: Upload release assets
