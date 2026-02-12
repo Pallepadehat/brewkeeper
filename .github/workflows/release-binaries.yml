@@ -12,8 +12,6 @@ jobs:
         include:
           - os: macos-14
             artifact_name: brewkeeper-darwin-arm64
-          - os: macos-13
-            artifact_name: brewkeeper-darwin-x64
           - os: ubuntu-latest
             artifact_name: brewkeeper-linux-x64
     runs-on: ${{ matrix.os }}
