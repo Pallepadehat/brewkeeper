@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DashboardState, PackageViewModel, Profile, Snapshot } from "../domain/types";
-import { enrichPackageMetadata, getDependencyImpact, listOutdatedPackages, upgradePackages } from "../services/brew";
+import { enrichPackageMetadata, getDependencyImpact, listOutdatedPackages, updateHomebrew, upgradePackages } from "../services/brew";
 import { loadProfiles, saveProfiles } from "../services/profiles";
 import { buildReleaseLinks } from "../services/releases";
 import { assessPackageRisk, buildPackageViewModels, isSafeUpgrade } from "../services/risk";
@@ -60,9 +60,27 @@ export function useBrewkeeperState() {
 
   const selectedPackage = visiblePackages[clampIndex(state.selectedIndex, visiblePackages.length)] ?? null;
 
-  const refresh = useCallback(async (message = "Refreshing packages...") => {
-    setState((prev) => ({ ...prev, loading: true, error: null, statusMessage: message }));
+  const refresh = useCallback(async (message = "Refreshing packages...", skipUpdate = false) => {
+    setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
+      let updateWarning: string | null = null;
+
+      if (skipUpdate) {
+        setState((prev) => ({ ...prev, statusMessage: message }));
+      } else {
+        setState((prev) => ({ ...prev, statusMessage: "Running brew update..." }));
+        try {
+          await updateHomebrew();
+        } catch (error) {
+          const updateError = error instanceof Error ? error.message : "brew update failed.";
+          const warningMessage = `brew update failed (${updateError}). Continuing with installed metadata.`;
+          updateWarning = warningMessage;
+          console.error("[brewkeeper] brew update failed:", error);
+          setState((prev) => ({ ...prev, statusMessage: warningMessage }));
+        }
+      }
+
+      setState((prev) => ({ ...prev, statusMessage: "Loading outdated packages..." }));
       const outdated = await listOutdatedPackages();
       const withMetadata = await enrichPackageMetadata(outdated);
       const [impactMap, releaseMap] = await Promise.all([
@@ -84,7 +102,9 @@ export function useBrewkeeperState() {
           packages,
           checked,
           selectedIndex: clampIndex(prev.selectedIndex, packages.length),
-          statusMessage: `Loaded ${packages.length} outdated package(s).`,
+          statusMessage: updateWarning
+            ? `Loaded ${packages.length} outdated package(s). ${updateWarning}`
+            : `Loaded ${packages.length} outdated package(s).`,
         };
       });
     } catch (error) {
@@ -197,7 +217,7 @@ export function useBrewkeeperState() {
         busy: false,
         statusMessage: output.split("\n")[0] ?? `Upgraded ${selectedPackages.length} package(s).`,
       }));
-      await refresh("Reloading package state after upgrade...");
+      await refresh("Reloading package state after upgrade...", true);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upgrade failed.";
       setState((prev) => ({ ...prev, busy: false, error: message, statusMessage: "Upgrade failed." }));
@@ -230,7 +250,7 @@ export function useBrewkeeperState() {
         busy: false,
         statusMessage: output.split("\n")[0] ?? `Rollback complete: ${snapshot.name}`,
       }));
-      await refresh("Refreshing package state after rollback...");
+      await refresh("Refreshing package state after rollback...", true);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Rollback failed.";
       setState((prev) => ({ ...prev, busy: false, error: message, statusMessage: "Rollback failed." }));

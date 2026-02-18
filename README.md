@@ -4,6 +4,8 @@
 
 `brewkeeper` is a polished terminal UI for Homebrew upgrades, focused on safer decisions and fast review.
 
+![Brewkeeper TUI screenshot](assets/brewkeeper-ui.png)
+
 It highlights:
 
 - major/minor/patch upgrade type

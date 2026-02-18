@@ -84,6 +84,13 @@ export async function listOutdatedPackages(): Promise<OutdatedPackage[]> {
   ] as OutdatedPackage[];
 }
 
+export async function updateHomebrew(): Promise<void> {
+  const result = await runCommand(["brew", "update"]);
+  if (!result.ok) {
+    throw new Error(result.stderr || "Failed to run brew update.");
+  }
+}
+
 export async function enrichPackageMetadata(packages: OutdatedPackage[]): Promise<OutdatedPackage[]> {
   const byName = new Map<string, { homepage?: string; caveats?: string }>();
 
