@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DashboardState, PackageViewModel, Profile, Snapshot } from "../domain/types";
-import { enrichPackageMetadata, getDependencyImpact, listOutdatedPackages, upgradePackages } from "../services/brew";
+import { enrichPackageMetadata, getDependencyImpact, listOutdatedPackages, updateHomebrew, upgradePackages } from "../services/brew";
 import { loadProfiles, saveProfiles } from "../services/profiles";
 import { buildReleaseLinks } from "../services/releases";
 import { assessPackageRisk, buildPackageViewModels, isSafeUpgrade } from "../services/risk";
@@ -63,6 +63,9 @@ export function useBrewkeeperState() {
   const refresh = useCallback(async (message = "Refreshing packages...") => {
     setState((prev) => ({ ...prev, loading: true, error: null, statusMessage: message }));
     try {
+      setState((prev) => ({ ...prev, statusMessage: "Running brew update..." }));
+      await updateHomebrew();
+      setState((prev) => ({ ...prev, statusMessage: "Loading outdated packages..." }));
       const outdated = await listOutdatedPackages();
       const withMetadata = await enrichPackageMetadata(outdated);
       const [impactMap, releaseMap] = await Promise.all([
