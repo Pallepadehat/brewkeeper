@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.2.2 - 2026-03-23
+
+### Added
+- Snapshot delete flow in snapshot list (`d`) with confirmation dialog.
+- Centered progress overlay that shows live action status during update/install/upgrade/snapshot operations.
+
+### Changed
+- Snapshot list dialog widened so helper text fits on one line.
+- Snapshot create dialog copy simplified to only essential text.
+- Removed snapshot delete hint from footer for a cleaner bottom bar.
+
+### Fixed
+- Submit handling now accepts both `enter` and `return` in modal flows.
+
 ## v0.2.1 - 2026-03-23
 
 ### Changed
