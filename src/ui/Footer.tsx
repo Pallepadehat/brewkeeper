@@ -26,9 +26,12 @@ export function Footer({ statusMessage, error, selectedCount, visibleCount }: Fo
         <Hint k="j/k" label="navigate" />
         <Hint k="space" label="select" />
         <Hint k="a" label="select all" />
+        <Hint k="f" label="search Homebrew" />
         <Hint k="u" label="upgrade selected" />
         <Hint k="s" label="toggle safe mode" />
-        <Hint k="b" label="snapshot" />
+        <Hint k="b" label="new snapshot" />
+        <Hint k="v" label="snapshot list" />
+        <Hint k="?" label="help" />
         <Hint k="r" label="refresh" />
         <Hint k="q" label="quit" />
         <text fg="#6b7089"> | {selectedCount}/{visibleCount} selected</text>

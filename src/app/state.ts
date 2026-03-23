@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DashboardState, PackageViewModel, Profile, Snapshot } from "../domain/types";
-import { enrichPackageMetadata, getDependencyImpact, listOutdatedPackages, updateHomebrew, upgradePackages } from "../services/brew";
+import {
+  enrichPackageMetadata,
+  getDependencyImpact,
+  installHomebrewPackage,
+  listOutdatedPackages,
+  type HomebrewSearchResult,
+  updateHomebrew,
+  upgradePackages,
+} from "../services/brew";
 import { loadProfiles, saveProfiles } from "../services/profiles";
 import { buildReleaseLinks } from "../services/releases";
 import { assessPackageRisk, buildPackageViewModels, isSafeUpgrade } from "../services/risk";
@@ -52,10 +60,7 @@ export function useBrewkeeperState() {
 
   const visiblePackages = useMemo(() => {
     const filteredByProfile = withProfileFilter(state.packages, activeProfile);
-    if (!state.safeModeOnly) {
-      return filteredByProfile;
-    }
-    return filteredByProfile.filter(isSafeUpgrade);
+    return state.safeModeOnly ? filteredByProfile.filter(isSafeUpgrade) : filteredByProfile;
   }, [activeProfile, state.packages, state.safeModeOnly]);
 
   const selectedPackage = visiblePackages[clampIndex(state.selectedIndex, visiblePackages.length)] ?? null;
@@ -135,6 +140,16 @@ export function useBrewkeeperState() {
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    setState((prev) => {
+      const next = clampIndex(prev.selectedIndex, visiblePackages.length);
+      if (next === prev.selectedIndex) {
+        return prev;
+      }
+      return { ...prev, selectedIndex: next };
+    });
+  }, [visiblePackages.length]);
 
   const setSelectedIndex = useCallback((nextIndex: number) => {
     setState((prev) => ({
@@ -224,10 +239,10 @@ export function useBrewkeeperState() {
     }
   }, [refresh, state.checked, visiblePackages]);
 
-  const makeSnapshot = useCallback(async () => {
+  const makeSnapshot = useCallback(async (name?: string) => {
     setState((prev) => ({ ...prev, busy: true, statusMessage: "Creating snapshot..." }));
     try {
-      const snapshot = await createSnapshot();
+      const snapshot = await createSnapshot(name);
       const snapshots = await listSnapshots();
       setState((prev) => ({
         ...prev,
@@ -238,6 +253,15 @@ export function useBrewkeeperState() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Snapshot failed.";
       setState((prev) => ({ ...prev, busy: false, error: message, statusMessage: "Snapshot failed." }));
+    }
+  }, []);
+
+  const refreshSnapshots = useCallback(async () => {
+    try {
+      const snapshots = await listSnapshots();
+      setState((prev) => ({ ...prev, snapshots }));
+    } catch {
+      // Ignore snapshot refresh errors in the background.
     }
   }, []);
 
@@ -257,6 +281,33 @@ export function useBrewkeeperState() {
     }
   }, [refresh]);
 
+  const runInstallPackage = useCallback(async (pkg: HomebrewSearchResult) => {
+    setState((prev) => ({
+      ...prev,
+      busy: true,
+      error: null,
+      statusMessage: `Installing ${pkg.name} (${pkg.type})...`,
+    }));
+
+    try {
+      const output = await installHomebrewPackage(pkg);
+      setState((prev) => ({
+        ...prev,
+        busy: false,
+        statusMessage: output.split("\n")[0] ?? `Installed ${pkg.name}.`,
+      }));
+      await refresh("Refreshing package state after install...", true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Install failed.";
+      setState((prev) => ({
+        ...prev,
+        busy: false,
+        error: message,
+        statusMessage: "Install failed.",
+      }));
+    }
+  }, [refresh]);
+
   return {
     state,
     visiblePackages,
@@ -270,7 +321,9 @@ export function useBrewkeeperState() {
     toggleSafeMode,
     selectProfile,
     runUpgrade,
+    runInstallPackage,
     makeSnapshot,
+    refreshSnapshots,
     runRollback,
   };
 }

@@ -2,37 +2,54 @@ interface HeaderProps {
   safeModeOnly: boolean;
   loading: boolean;
   busy: boolean;
+  visibleCount: number;
+  totalCount: number;
 }
 
-export function Header({ safeModeOnly, loading, busy }: HeaderProps) {
-  const status = busy ? "working..." : loading ? "loading..." : "ready";
+export function Header({
+  safeModeOnly,
+  loading,
+  busy,
+  visibleCount,
+  totalCount,
+}: HeaderProps) {
+  const status = busy ? "WORKING" : loading ? "LOADING" : "READY";
+  const statusColor = busy ? "#bb9af7" : loading ? "#e0af68" : "#9ece6a";
+  const modeLabel = safeModeOnly ? "SAFE" : "ALL";
+  const modeColor = safeModeOnly ? "#9ece6a" : "#7aa2f7";
 
   return (
     <box
       height={3}
       border
       borderStyle="rounded"
-      borderColor="#3a3a4a"
-      paddingLeft={1}
-      paddingRight={1}
+      borderColor="#4a5070"
+      paddingLeft={2}
+      paddingRight={2}
+      flexDirection="row"
       alignItems="center"
     >
-      <box flexGrow={1}>
-        <text>
-          <span fg="#7aa2f7">
-            <strong>BrewKeeper</strong>
-          </span>
-        </text>
-      </box>
-      <box>
-        <text>
-          <span fg={safeModeOnly ? "#9ece6a" : "#e0af68"}>
-            {safeModeOnly ? "safe upgrades only" : "showing all"}
-          </span>
-          <span fg="#6b7089"> | </span>
-          <span fg={status === "ready" ? "#8690b3" : "#bb9af7"}>{status}</span>
-        </text>
-      </box>
+      <text>
+        <span fg="#7aa2f7"><strong>BrewKeeper</strong></span>
+      </text>
+      <box flexGrow={1} />
+      <text>
+        <span fg="#6b7089">[</span>
+        <span fg={modeColor}>{modeLabel}</span>
+        <span fg="#6b7089">]</span>
+      </text>
+      <box width={1} />
+      <text>
+        <span fg="#6b7089">[</span>
+        <span fg="#c0caf5">{visibleCount}/{totalCount}</span>
+        <span fg="#6b7089">]</span>
+      </text>
+      <box width={1} />
+      <text>
+        <span fg="#6b7089">[</span>
+        <span fg={statusColor}>{status}</span>
+        <span fg="#6b7089">]</span>
+      </text>
     </box>
   );
 }

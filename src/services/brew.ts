@@ -7,6 +7,24 @@ interface CommandResult {
   code: number;
 }
 
+export interface HomebrewSearchResult {
+  name: string;
+  type: "formula" | "cask";
+}
+
+export interface HomebrewPackagePreview {
+  name: string;
+  type: "formula" | "cask";
+  description?: string;
+  homepage?: string;
+  latestVersion?: string;
+  installedVersions: string[];
+  installed: boolean;
+  dependencies: string[];
+  caveats?: string;
+  tap?: string;
+}
+
 async function runCommand(cmd: string[]): Promise<CommandResult> {
   const proc = Bun.spawn({
     cmd,
@@ -199,4 +217,136 @@ export async function upgradePackages(packages: OutdatedPackage[]): Promise<stri
   }
 
   return messages.join(" ") || `Upgraded ${packages.length} package(s).`;
+}
+
+function parseSearchOutput(raw: string, type: "formula" | "cask"): HomebrewSearchResult[] {
+  const entries = raw
+    .split(/\s+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => line !== "Formulae" && line !== "Casks");
+
+  return entries.map((name) => ({ name, type }));
+}
+
+export async function searchHomebrewPackages(query: string): Promise<HomebrewSearchResult[]> {
+  const normalized = query.trim();
+  if (normalized.length === 0) {
+    return [];
+  }
+
+  const [formulaResult, caskResult] = await Promise.all([
+    runCommand(["brew", "search", "--formula", normalized]),
+    runCommand(["brew", "search", "--cask", normalized]),
+  ]);
+
+  if (!formulaResult.ok && !caskResult.ok) {
+    throw new Error(formulaResult.stderr || caskResult.stderr || "Failed to search Homebrew packages.");
+  }
+
+  const combined = [
+    ...(formulaResult.ok ? parseSearchOutput(formulaResult.stdout, "formula") : []),
+    ...(caskResult.ok ? parseSearchOutput(caskResult.stdout, "cask") : []),
+  ];
+
+  const unique = new Map<string, HomebrewSearchResult>();
+  for (const entry of combined) {
+    const key = `${entry.type}:${entry.name}`;
+    if (!unique.has(key)) {
+      unique.set(key, entry);
+    }
+  }
+
+  return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function toStringArray(input: unknown): string[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  return input.filter((entry): entry is string => typeof entry === "string");
+}
+
+export async function loadHomebrewPackagePreview(pkg: HomebrewSearchResult): Promise<HomebrewPackagePreview> {
+  if (pkg.type === "formula") {
+    const result = await runCommand(["brew", "info", "--json=v2", pkg.name]);
+    if (!result.ok) {
+      throw new Error(result.stderr || `Failed to load brew info for ${pkg.name}.`);
+    }
+
+    let payload: any;
+    try {
+      payload = JSON.parse(result.stdout);
+    } catch {
+      throw new Error(`Homebrew returned invalid JSON for ${pkg.name}.`);
+    }
+
+    const formula = Array.isArray(payload?.formulae) ? payload.formulae[0] : undefined;
+    if (!formula) {
+      throw new Error(`No formula metadata found for ${pkg.name}.`);
+    }
+
+    const installedEntries = Array.isArray(formula?.installed) ? formula.installed : [];
+    const installedVersions = installedEntries
+      .map((entry: any) => (typeof entry?.version === "string" ? entry.version : null))
+      .filter((version: string | null): version is string => version !== null);
+
+    return {
+      name: typeof formula?.name === "string" ? formula.name : pkg.name,
+      type: "formula",
+      description: typeof formula?.desc === "string" ? formula.desc : undefined,
+      homepage: typeof formula?.homepage === "string" ? formula.homepage : undefined,
+      latestVersion: typeof formula?.versions?.stable === "string" ? formula.versions.stable : undefined,
+      installedVersions,
+      installed: installedVersions.length > 0,
+      dependencies: toStringArray(formula?.dependencies).slice(0, 16),
+      caveats: typeof formula?.caveats === "string" ? formula.caveats.trim() || undefined : undefined,
+      tap: typeof formula?.tap === "string" ? formula.tap : undefined,
+    };
+  }
+
+  const result = await runCommand(["brew", "info", "--json=v2", "--cask", pkg.name]);
+  if (!result.ok) {
+    throw new Error(result.stderr || `Failed to load brew info for ${pkg.name}.`);
+  }
+
+  let payload: any;
+  try {
+    payload = JSON.parse(result.stdout);
+  } catch {
+    throw new Error(`Homebrew returned invalid JSON for ${pkg.name}.`);
+  }
+
+  const cask = Array.isArray(payload?.casks) ? payload.casks[0] : undefined;
+  if (!cask) {
+    throw new Error(`No cask metadata found for ${pkg.name}.`);
+  }
+
+  const installedVersions = toStringArray(cask?.installed);
+  const dependentFormulae = toStringArray(cask?.depends_on?.formula);
+  const dependentCasks = toStringArray(cask?.depends_on?.cask);
+
+  return {
+    name: typeof cask?.token === "string" ? cask.token : pkg.name,
+    type: "cask",
+    description: typeof cask?.desc === "string" ? cask.desc : undefined,
+    homepage: typeof cask?.homepage === "string" ? cask.homepage : undefined,
+    latestVersion: typeof cask?.version === "string" ? cask.version : undefined,
+    installedVersions,
+    installed: installedVersions.length > 0,
+    dependencies: [...dependentFormulae, ...dependentCasks].slice(0, 16),
+    caveats: typeof cask?.caveats === "string" ? cask.caveats.trim() || undefined : undefined,
+    tap: typeof cask?.tap === "string" ? cask.tap : undefined,
+  };
+}
+
+export async function installHomebrewPackage(pkg: HomebrewSearchResult): Promise<string> {
+  const cmd = pkg.type === "cask"
+    ? ["brew", "install", "--cask", pkg.name]
+    : ["brew", "install", pkg.name];
+  const result = await runCommand(cmd);
+  if (!result.ok) {
+    throw new Error(result.stderr || `Failed to install ${pkg.name}.`);
+  }
+  return result.stdout.trim() || `Installed ${pkg.name}.`;
 }

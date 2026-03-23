@@ -13,7 +13,7 @@ It highlights:
 - risk signals and caveats
 - formula + cask support
 - safe-upgrades-only mode
-- profile + snapshot/rollback support (Brewfile-based)
+- snapshot/rollback support (Brewfile-based)
 
 ## Install
 
@@ -44,11 +44,14 @@ brewkeeper --version  # print version
 | `j` / `k` | Navigate packages     |
 | `Space`   | Toggle selection      |
 | `a`       | Select / deselect all |
+| `f`       | Search Homebrew repos |
+| `i`       | Install selected search result (inside repo search) |
 | `s`       | Toggle safe-mode      |
 | `u`       | Upgrade selected      |
-| `b`       | Create snapshot       |
-| `p`       | Switch profile        |
-| `R`       | Rollback to snapshot  |
+| `b`       | Create named snapshot |
+| `v`       | Open snapshot list    |
+| `R`       | Open snapshot list    |
+| `?`       | Show keyboard help    |
 | `r`       | Refresh               |
 | `q`       | Quit                  |
 

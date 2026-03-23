@@ -54,12 +54,23 @@ function buildSnapshotId(now: Date): string {
   return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
 }
 
+function sanitizeSnapshotName(name: string): string {
+  return name
+    .trim()
+    .replace(/[/\\?%*:|"<>]/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^\.+/, "")
+    .replace(/\.+$/, "");
+}
+
 export async function createSnapshot(name?: string): Promise<Snapshot> {
   const snapshotDir = await ensureSnapshotDir();
 
   const now = new Date();
   const id = buildSnapshotId(now);
-  const displayName = name && name.trim().length > 0 ? name.trim() : `snapshot-${id}`;
+  const sanitized = name ? sanitizeSnapshotName(name) : "";
+  const displayName = sanitized.length > 0 ? sanitized : `snapshot-${id}`;
   const filePath = path.join(snapshotDir, `${displayName}.Brewfile`);
 
   const result = await runCommand(["brew", "bundle", "dump", "--force", "--file", filePath]);
