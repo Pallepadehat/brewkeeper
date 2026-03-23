@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.2.1 - 2026-03-23
+
+### Changed
+- Removed the duplicate snapshot-list shortcut mapping to reduce UX confusion.
+- Snapshot list is now opened via `v` only.
+
+### Fixed
+- Updated keyboard help and README shortcut table to match the real keybindings.
+
 ## v0.2.0 - 2026-03-23
 
 ### Added

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useKeyboard, useRenderer } from "@opentui/react";
-import { canRollback, selectedCount, useBrewkeeperState } from "./state";
+import { selectedCount, useBrewkeeperState } from "./state";
 import {
   loadHomebrewPackagePreview,
   searchHomebrewPackages,
@@ -287,13 +287,6 @@ export function App() {
     if (key.name === "?" || (key.shift && key.name === "/")) {
       setModal("help");
       return;
-    }
-    if (key.shift && key.name === "r") {
-      if (canRollback(state.snapshots)) {
-        void refreshSnapshots();
-        setModalIndex(0);
-        setModal("snapshotList");
-      }
     }
   });
 
