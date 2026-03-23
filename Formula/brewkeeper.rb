@@ -6,7 +6,7 @@ class Brewkeeper < Formula
 
   on_macos do
     url "https://github.com/Pallepadehat/brewkeeper/releases/download/v0.2.0/brewkeeper-darwin-arm64.tar.gz"
-    sha256 "<REPLACE_DARWIN_SHA256>"
+    sha256 "b24beac5cf81d60978fc270571eaa3831091e383e51cda586fe23cbdf17b93d5"
   end
 
   on_linux do
