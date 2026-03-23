@@ -3,9 +3,10 @@ interface PickerModalProps {
   options: string[];
   selectedIndex: number;
   visible: boolean;
+  helperText?: string;
 }
 
-export function PickerModal({ title, options, selectedIndex, visible }: PickerModalProps) {
+export function PickerModal({ title, options, selectedIndex, visible, helperText }: PickerModalProps) {
   if (!visible) return null;
 
   return (
@@ -23,14 +24,14 @@ export function PickerModal({ title, options, selectedIndex, visible }: PickerMo
         borderStyle="rounded"
         borderColor="#7aa2f7"
         backgroundColor="#1a1b26"
-        width={44}
+        width={56}
         flexDirection="column"
         padding={1}
       >
         <text>
           <span fg="#7aa2f7"><strong>{title}</strong></span>
         </text>
-        <text fg="#6b7089">j/k navigate | enter confirm | esc close</text>
+        <text fg="#6b7089">{helperText ?? "j/k navigate | enter confirm | esc close"}</text>
         <box height={1} />
         {options.length === 0 ? (
           <text fg="#8690b3">No options.</text>

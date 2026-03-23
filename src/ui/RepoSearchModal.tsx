@@ -235,8 +235,6 @@ export function RepoSearchModal({
           <span fg="#6b7089"> · </span>
           <span fg="#7aa2f7">↑/↓</span> browse
           <span fg="#6b7089"> · </span>
-          <span fg="#7aa2f7">↵</span> install
-          <span fg="#6b7089"> · </span>
           <span fg="#7aa2f7">i</span> install
         </text>
       </box>

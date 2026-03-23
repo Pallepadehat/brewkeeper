@@ -28,6 +28,7 @@ const SECTIONS: Array<{
       { key: "s", action: "Toggle safe mode" },
       { key: "b", action: "Create named snapshot" },
       { key: "v", action: "Open snapshot list" },
+      { key: "d", action: "Delete selected snapshot (in list)" },
       { key: "r", action: "Refresh package state" },
     ],
   },

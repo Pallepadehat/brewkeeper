@@ -14,11 +14,19 @@ import { HelpModal } from "../ui/HelpModal";
 import { PackageDetails } from "../ui/PackageDetails";
 import { PackageList } from "../ui/PackageList";
 import { PickerModal } from "../ui/PickerModal";
+import { ProgressOverlay } from "../ui/ProgressOverlay";
 import { RepoSearchModal } from "../ui/RepoSearchModal";
 import { Spinner } from "../ui/Spinner";
 import { TextInputModal } from "../ui/TextInputModal";
 
-type ModalType = "none" | "snapshotList" | "snapshotCreate" | "help" | "repoSearch" | "installConfirm";
+type ModalType =
+  | "none"
+  | "snapshotList"
+  | "snapshotCreate"
+  | "help"
+  | "repoSearch"
+  | "installConfirm"
+  | "snapshotDeleteConfirm";
 
 function defaultSnapshotName(): string {
   const now = new Date();
@@ -43,6 +51,7 @@ export function App() {
     makeSnapshot,
     refreshSnapshots,
     runRollback,
+    runDeleteSnapshot,
   } = useBrewkeeperState();
 
   const [modal, setModal] = useState<ModalType>("none");
@@ -57,16 +66,26 @@ export function App() {
   const [repoPreviewLoading, setRepoPreviewLoading] = useState(false);
   const [repoPreviewError, setRepoPreviewError] = useState<string | null>(null);
   const [pendingInstall, setPendingInstall] = useState<HomebrewSearchResult | null>(null);
+  const [pendingSnapshotDelete, setPendingSnapshotDelete] = useState<number | null>(null);
   const searchRequestId = useRef(0);
   const previewRequestId = useRef(0);
 
   const selectedVisibleCount = selectedCount(visiblePackages, state.checked);
+  const showProgressOverlay = state.busy || (state.loading && state.packages.length > 0);
 
   const snapshotOptions = useMemo(
     () => state.snapshots.map((s) => `${s.name} (${s.createdAt.split("T")[0]})`),
     [state.snapshots],
   );
   const selectedRepoResult = repoResults[repoSelectedIndex] ?? null;
+
+  useEffect(() => {
+    if (modal !== "snapshotList") {
+      return;
+    }
+    const max = Math.max(0, state.snapshots.length - 1);
+    setModalIndex((prev) => Math.min(prev, max));
+  }, [modal, state.snapshots.length]);
 
   useEffect(() => {
     if (modal !== "repoSearch") {
@@ -149,6 +168,8 @@ export function App() {
   }, [modal, selectedRepoResult]);
 
   useKeyboard((key) => {
+    const isSubmitKey = key.name === "enter" || key.name === "return";
+
     if (key.ctrl && key.name === "c") {
       renderer.destroy();
       return;
@@ -161,11 +182,33 @@ export function App() {
           setModal("repoSearch");
           return;
         }
-        if (key.name === "enter" || key.name === "y") {
+        if (isSubmitKey || key.name === "y") {
           if (pendingInstall && !state.busy) {
             void runInstallPackage(pendingInstall);
           }
           setModal("repoSearch");
+          return;
+        }
+        return;
+      }
+
+      if (modal === "snapshotDeleteConfirm") {
+        if (key.name === "escape" || key.name === "n" || key.name === "q") {
+          setPendingSnapshotDelete(null);
+          setModal("snapshotList");
+          return;
+        }
+        if (isSubmitKey || key.name === "y") {
+          const index = pendingSnapshotDelete;
+          if (typeof index === "number") {
+            const snapshot = state.snapshots[index];
+            if (snapshot && !state.busy) {
+              void runDeleteSnapshot(snapshot);
+              setModalIndex(Math.max(0, index - 1));
+            }
+          }
+          setPendingSnapshotDelete(null);
+          setModal("snapshotList");
           return;
         }
         return;
@@ -198,7 +241,7 @@ export function App() {
         }
         return;
       }
-      if (key.name === "enter") {
+      if (isSubmitKey) {
         if (modal === "snapshotList") {
           const snapshot = state.snapshots[modalIndex];
           if (snapshot) void runRollback(snapshot);
@@ -221,6 +264,14 @@ export function App() {
         if (selectedRepoResult && !state.busy) {
           setPendingInstall(selectedRepoResult);
           setModal("installConfirm");
+        }
+        return;
+      }
+      if (modal === "snapshotList" && key.name === "d") {
+        const snapshot = state.snapshots[modalIndex];
+        if (snapshot) {
+          setPendingSnapshotDelete(modalIndex);
+          setModal("snapshotDeleteConfirm");
         }
         return;
       }
@@ -332,16 +383,13 @@ export function App() {
         title="Rollback to Snapshot"
         options={snapshotOptions}
         selectedIndex={modalIndex}
+        helperText="j/k navigate | enter rollback | d delete | esc close"
       />
       <TextInputModal
         visible={modal === "snapshotCreate"}
         title="Create Snapshot"
-        description="Name your snapshot before saving the Brewfile state."
         value={snapshotNameDraft}
-        placeholder="snapshot name..."
-        helperText="enter save snapshot | esc close"
-        readyStatusText="name ready"
-        emptyStatusText="uses timestamp name"
+        placeholder="snapshot name"
         onChange={setSnapshotNameDraft}
       />
       <RepoSearchModal
@@ -362,7 +410,18 @@ export function App() {
         message={pendingInstall ? `Install ${pendingInstall.name} (${pendingInstall.type}) now?` : "Install package?"}
         details="This will run brew install and then refresh your outdated package list."
       />
+      <ConfirmModal
+        visible={modal === "snapshotDeleteConfirm"}
+        title="Delete Snapshot"
+        message={
+          typeof pendingSnapshotDelete === "number" && state.snapshots[pendingSnapshotDelete]
+            ? `Delete snapshot ${state.snapshots[pendingSnapshotDelete]?.name}?`
+            : "Delete selected snapshot?"
+        }
+        details="This only removes the saved Brewfile snapshot."
+      />
       <HelpModal visible={modal === "help"} />
+      <ProgressOverlay visible={showProgressOverlay} message={state.statusMessage} />
     </box>
   );
 }

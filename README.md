@@ -50,6 +50,7 @@ brewkeeper --version  # print version
 | `u`       | Upgrade selected                                    |
 | `b`       | Create named snapshot                               |
 | `v`       | Open snapshot list                                  |
+| `d`       | Delete selected snapshot (inside snapshot list)     |
 | `?`       | Show keyboard help                                  |
 | `r`       | Refresh                                             |
 | `q`       | Quit                                                |

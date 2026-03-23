@@ -12,7 +12,7 @@ import {
 import { loadProfiles, saveProfiles } from "../services/profiles";
 import { buildReleaseLinks } from "../services/releases";
 import { assessPackageRisk, buildPackageViewModels, isSafeUpgrade } from "../services/risk";
-import { createSnapshot, listSnapshots, rollbackToSnapshot } from "../services/snapshots";
+import { createSnapshot, deleteSnapshot, listSnapshots, rollbackToSnapshot } from "../services/snapshots";
 
 const DEFAULT_STATE: DashboardState = {
   loading: true,
@@ -308,6 +308,34 @@ export function useBrewkeeperState() {
     }
   }, [refresh]);
 
+  const runDeleteSnapshot = useCallback(async (snapshot: Snapshot) => {
+    setState((prev) => ({
+      ...prev,
+      busy: true,
+      error: null,
+      statusMessage: `Deleting snapshot ${snapshot.name}...`,
+    }));
+
+    try {
+      await deleteSnapshot(snapshot);
+      const snapshots = await listSnapshots();
+      setState((prev) => ({
+        ...prev,
+        busy: false,
+        snapshots,
+        statusMessage: `Snapshot deleted: ${snapshot.name}`,
+      }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Delete snapshot failed.";
+      setState((prev) => ({
+        ...prev,
+        busy: false,
+        error: message,
+        statusMessage: "Delete snapshot failed.",
+      }));
+    }
+  }, []);
+
   return {
     state,
     visiblePackages,
@@ -325,6 +353,7 @@ export function useBrewkeeperState() {
     makeSnapshot,
     refreshSnapshots,
     runRollback,
+    runDeleteSnapshot,
   };
 }
 

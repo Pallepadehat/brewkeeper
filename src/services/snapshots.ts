@@ -1,4 +1,4 @@
-import { mkdir, readdir, stat } from "node:fs/promises";
+import { mkdir, readdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import type { Snapshot } from "../domain/types";
 
@@ -115,4 +115,8 @@ export async function rollbackToSnapshot(snapshot: Snapshot): Promise<string> {
     throw new Error(result.stderr || "Rollback failed.");
   }
   return result.stdout.trim() || `Rollback complete: ${snapshot.name}`;
+}
+
+export async function deleteSnapshot(snapshot: Snapshot): Promise<void> {
+  await unlink(snapshot.path);
 }
