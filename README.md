@@ -1,4 +1,4 @@
-# brewkeeper
+# brewkeeper - Beta
 
 [![CI](https://github.com/Pallepadehat/brewkeeper/actions/workflows/ci.yml/badge.svg)](https://github.com/Pallepadehat/brewkeeper/actions/workflows/ci.yml)
 
